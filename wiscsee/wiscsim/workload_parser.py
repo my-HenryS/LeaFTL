@@ -62,8 +62,10 @@ def parse_events(filename, page_size, recorder=True, start_lineno=0, lineno=floa
         format = "blktrace"
     if "systor17" in filename:
         format = "systor"
-    if "traces" in filename:
-        format = "normal"
+    # if "traces" in filename:
+    #     format = "normal"
+    if "MSR" in filename:
+        format = "MSR"
     if "FIU" in filename:
         format = "FIU"
     if "Financial" in filename:

@@ -13,7 +13,7 @@ import objgraph
 import pickle
 from bisect import bisect_left, insort_left
 import numpy as np
-from wiscsim.lsm_tree.bloom_filter import BloomFilter
+# from wiscsim.lsm_tree.bloom_filter import BloomFilter
 import bitarray
 import bitarray.util
 from wiscsim.utils import *

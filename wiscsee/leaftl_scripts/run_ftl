@@ -20,7 +20,6 @@ from config_helper import rule_parameter
 from pyreuse.helpers import shcmd
 from config_helper import experiment
 from wiscsim.learnedftl import *
-from wiscsim.lsm_tree.bloom_filter import BloomFilter
 from wiscsim.utils import *
 from wiscsim.workload_parser import parse_events, create_config, mix_events
 import math
