@@ -1,4 +1,4 @@
-#!/home/js39/software/pypy2.7/bin/pypy
+#!/usr/bin/python2
 import unittest
 import collections
 import shutil
@@ -163,7 +163,7 @@ class RunFTL():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--ftl', dest="ftl", required=True, help="FTL to run")
-    parser.add_argument('-t', '--trace', dest="trace", default="/home/js39/datasets/MSR-Cambridge/hm_0.csv", help="Trace path")
+    parser.add_argument('-t', '--trace', dest="trace", help="Trace path")
     parser.add_argument('-l', '--lineno', dest="lineno", default=10**9, help="Line number", type=int)
     parser.add_argument('-sl', '--start-line', dest="start_lineno", default=0, help="Start line number", type=int)
     parser.add_argument('-c', '--cache', dest="cache_size", default=0, help="Cache Size in MB", type=float)

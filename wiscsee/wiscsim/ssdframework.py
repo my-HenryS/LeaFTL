@@ -315,7 +315,6 @@ class Ssd(SsdBase):
         # import math
         # read_latencies = []
         # write_latencies = []
-        # with open("/home/js39/software/wiscsee/learnedftl/results/e2e_latency.log", "w") as fp:
         #     fp.write("[size] [offset] [start] [end]\n")
 
         # for _ in rw_events.items():
@@ -342,7 +341,6 @@ class Ssd(SsdBase):
         #     plt.grid(True)
         #     fig.savefig(path)
 
-        #plot_ecdf(read_latencies, "/home/js39/software/wiscsee/learnedftl/results/e2e_%s.png" % self.conf['ftl_type'])
         
         # if len(read_latencies) > 0:
         #     log_msg("End-to-end read response time per page: %.2fus" % np.average(read_latencies))
