@@ -142,6 +142,8 @@ class Ftl(object):
         self.waf = {"request" : 0, "actual" : 0}
         
 
+    def recorder_enabled(self, enable=True):
+        pass
 
     def _check_segment_config(self):
         if self.conf['segment_bytes'] % (self.conf.n_pages_per_block \

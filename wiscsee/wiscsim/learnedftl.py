@@ -17,7 +17,7 @@ import numpy as np
 import bitarray
 import bitarray.util
 from wiscsim.utils import *
-from wiscsim.sftl import SFTLPage
+from wiscsim.sftl import SFTLPage, DFTLPage
 
 import config
 import ftlbuilder
@@ -1298,7 +1298,7 @@ class PLR():
 
     def __init__(self, gamma):
         self.gamma = gamma
-        self.max_length = 96# 256
+        self.max_length = 256
         self.init()
 
     def init(self):
@@ -1677,8 +1677,11 @@ class FrameLogPLR:
         # assert(self.max_size >= self.conf.page_size)
 
         # internal_type = "sftl"
-        if self.conf['use_sftl']:
+        if self.conf['internal_ftl_type'] == "sftl":
             self.type = "sftl"
+            self.frame_length = 1024
+        elif self.conf['internal_ftl_type'] == "dftldes":
+            self.type = "dftldes"
             self.frame_length = 1024
         else:
             self.type = "learnedftl"
@@ -1701,6 +1704,9 @@ class FrameLogPLR:
         elif self.type == "sftl":
             return SFTLPage(frame_no, self.frame_length)
 
+        elif self.type == "dftldes":
+            return DFTLPage(frame_no)
+        
         else:
             raise NotImplementedError
 
@@ -1755,7 +1761,7 @@ class FrameLogPLR:
             self.counter["mapping_table_read_miss"] += 1
             frame = self.frame_on_flash[frame_no]
             blocknum = self.GTD[frame_no]
-            results, lookup = frame.lookup(lpn, first)
+            results, lookup, _, _ = frame.lookup(lpn, first)
             pages_to_read = [blocknum]
 
             if frame_no in self.frames:
@@ -1940,7 +1946,7 @@ class PFTL(object):
 
     @property
     def memory(self):
-        return len(self.mapping_table)*8
+        return len(self.mapping_table) * (PPN_BYTES + LPN_BYTES)
 
 
 
@@ -1955,8 +1961,9 @@ def split_ext(extent):
 
     return exts
 
-
+# no need to dump the entire timeline if storage space is limited
 def write_timeline(conf, recorder, op_id, op, arg, start_time, end_time):
+    return
     recorder.write_file('timeline.txt',
             op_id = op_id, op = op, arg = arg,
             start_time = start_time, end_time = end_time)

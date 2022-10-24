@@ -1,0 +1,198 @@
+#!/usr/bin/python3
+
+
+from email.policy import default
+import glob
+from inspect import trace
+import re
+from collections import defaultdict
+from scipy.stats import gmean
+import numpy as np
+import pandas as pd
+import os
+import sys
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+import math
+
+
+matplotlib.rcParams.update({'font.size': 10})
+matplotlib.rcParams.update({'font.family': 'serif'})
+matplotlib.rcParams['xtick.major.pad'] = '8'
+matplotlib.rcParams['ytick.major.pad'] = '8'
+
+colors = ['#ff796c', 'lightgray', '#95d0fc', 'white', '#96f97b']
+hatches = ['', "//", "\\\\", '', '-']
+
+def plot_latency(data, traces, ftls, filename, log=False):
+    fig, ax = plt.subplots(1, figsize=(5, 2))
+    for j, row in enumerate(data):
+        data[j] = row / max(row[0], 1)
+
+
+    X = np.arange(7)
+    width = 1/(len(ftls)+1)
+    for i in range(len(ftls)):
+        ax.bar(X + width*i, data[:, i], color = colors[i], width = width, label=ftls[i], edgecolor = 'black', hatch=hatches[i], zorder=3)
+    ax.set_xticks(X + width * 1.5)
+    ax.set_xticklabels(traces, ha = "center", rotation=0)
+    # ax.set_xlabel(xlabels[k])
+    ax.set_ylabel("Normalized Perf.")
+    ax.set_ylim([0,1.2])
+    ax.grid(axis = 'y', linestyle='--', zorder=0)
+
+    # lines_labels = [_ax.get_legend_handles_labels() for _ax in fig.axes][:1]
+    # lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+
+    legend = plt.legend(loc="upper center", prop={'size':7}, ncol = 4, borderaxespad=0.)
+    ax.set_xticklabels(traces, ha = "right", rotation=15)
+    # legend.set_rasterized(True)
+    legend.draw_frame(False)
+    plt.tight_layout()
+    plt.savefig("plots/latency.pdf")
+
+def plot_memory(data, traces, ftls, filename, log=False):
+    fig, ax = plt.subplots(1, figsize=(5, 2))
+
+    X = np.arange(len(traces))
+    # print(data, traces, ftls)
+    width = 1/(len(ftls)+1)
+    for i in range(0, len(ftls)):
+        ax.bar(X + width*i, data[:, i], color = colors[i], width = width, label=ftls[i], edgecolor = 'black', hatch=hatches[i], rasterized=False, zorder=3)
+
+    ymax = max(data[:, 0]) * 1.2
+    if ymax <= 2:
+        ytickgap = 0.2
+    else:
+        ytickgap = 4.0
+    ax.set_xticks(X + width * 1.5)
+    ax.set_xticklabels(traces, ha = "right", rotation=15)
+    ax.set_ylabel("Memory Footprint \nReduction")
+    legend = ax.legend(loc="upper center", prop={'size':7}, ncol = 5, borderaxespad=0.)
+    legend.draw_frame(False)
+    if log:
+        ax.set_yscale('log')
+        ax.set_ylim( (pow(10,-2),2*pow(10,0)) )
+        ax.set_yticks([1/50,1/20,1/10,1/5,1/2,1])
+        ax.set_yticklabels(reversed(["1x","2x","5x","10x","20x","50x"]))
+    else:
+        ax.set_ylim([0,ymax])
+        ax.set_yticks(np.arange(0, ymax, ytickgap))
+    ax.grid(axis = 'y', linestyle='--', zorder=0)
+
+
+    plt.tight_layout()
+    plt.savefig(f"plots/{filename}.pdf")
+    plt.clf()
+
+def abbreviate(file_name):
+    dictionary = {"MSR-hm": ["hm_0"], "MSR-usr": ["usr_0"], "MSR-prxy": ["prxy_0"], "MSR-src2_2": ["src2_2"], "MSR-prn": ["prn_0"], "FIU-home": ["FIU", "homes"], "FIU-mail": ["FIU", "mail"], "MSR-rsrch": ["rsrch_0"], "MSR-proj": ["proj_0"], "MSR-src2": ["src2_0"], "MSR-ts": ["ts_0"], "MSR-wdev": ["wdev_0"], "tpcc":["tpcc"], "auctionmark":["auctionmark"], "seats":["seats"], "oltp":["oltp"], "compflow":["compflow"]}
+
+    for short, keywords in dictionary.items():
+        match = True
+        for key in keywords:
+            if key not in file_name:
+                match = False
+                break
+        if match:
+            return short
+           
+def geo_mean(iterable):
+    a = np.array(iterable)
+    return a.prod()**(1.0/len(a))
+
+if __name__ == "__main__":
+    batch_name = sys.argv[1]
+    BASE_PATH = os.path.dirname(os.path.realpath(__file__))
+    PLOT_DIR = f"{BASE_PATH}/plots/"
+    os.makedirs(PLOT_DIR, exist_ok=True)
+    raw_data_dir = [f'{BASE_PATH}/raw_results/{batch_name}']
+
+    if type(raw_data_dir) == list:
+        files = []
+        for dir in raw_data_dir:
+            files += glob.glob(dir+"/*.txt")
+    else:
+        files = glob.glob(raw_data_dir+"/*.txt")
+    latencies = defaultdict(dict)
+    memory = defaultdict(dict)
+    dftl_memory = defaultdict(dict)
+    segments = defaultdict(dict)
+    consecutive_segments = defaultdict(dict)
+    ratios = defaultdict(dict)
+    requests = defaultdict(dict)
+ 
+    categories = set()
+
+    for file in files:
+        with open(file, "r") as f:
+            segment, consecutive, latency, trace_file, memory_size, dftl_memory_size, ratio, request, ftl = None, None, None, None, None, None, None, None, None
+            for i, line in enumerate(f):
+                line = line.strip()
+                if i == 0:
+                    cmd = line.split(" ")
+                    try:
+                        gamma = int(float(cmd[cmd.index("-g")+1]))
+                    except ValueError:
+                        gamma = 1e-4
+                    cache_size = int(float(cmd[cmd.index("-c")+1]))
+                    ftl = cmd[cmd.index("-f")+1]
+                    trace_file = abbreviate(cmd[cmd.index("-t")+1])
+                if "estimated learnedftl memory footprint:" in line:
+                    memory_size = int(re.search("([0-9]+) B$", line).group(1))
+                if "estimated dftl memory footprint:" in line:
+                    dftl_memory_size = int(re.search("([0-9]+) B$", line).group(1))
+                if "End-to-end overall response time per page:" in line:
+                    latency = float(re.search("([0-9]+.[0-9]+)us", line).group(1))
+                    request = float(re.search("Num of requests ([0-9]+)", line).group(1))
+                if "# of segments:" in line:
+                    segment = float(re.search(": ([0-9]+)", line).group(1))
+                if "# of consecutive segments:" in line:
+                    consecutive = float(re.search(": ([0-9]+)", line).group(1))
+                if "defaultdict(<type 'int'>" in line:
+                    misprediction = eval(re.search("({.*?})", line).group(1))
+                    if 2 in misprediction:
+                        ratio = misprediction[2] / (misprediction[1] + misprediction[2])
+                    else:
+                        ratio = 0.0
+                    ratio = round(ratio, 4)
+    
+            category = ftl 
+            categories.add(category)
+
+            if memory_size:
+                memory[trace_file][category] = memory_size
+                dftl_memory[trace_file][category] = dftl_memory_size
+            if latency:
+                latencies[trace_file][category] = latency
+            if request:
+                requests[trace_file][category] = request
+            if segment:
+                segments[trace_file][category] = segment
+            if consecutive:
+                consecutive_segments[trace_file][category] = consecutive
+            if ratio != None:
+                ratios[trace_file][category] = ratio
+
+    if "memory_batch" in batch_name:
+        memory_df = pd.DataFrame(memory)
+        memory_df = memory_df.reindex(['dftldes', 'sftl', 'learnedftl'])
+        memory_df = memory_df.sort_index(axis=1)
+        memory_arr = np.transpose(memory_df.to_numpy(dtype=float))
+        for i in range(memory_arr.shape[0]):
+            memory_arr[i, :] = memory_arr[i, :] / memory_arr[i, 0]
+        
+        plot_memory(memory_arr, memory_df.columns, ['DFTL', 'SFTL', 'LeaFTL'], "memory", log=True)
+            
+    if "main_batch" in batch_name: 
+        latency_df = pd.DataFrame(latencies)
+        latency_df = latency_df.reindex(['dftldes', 'sftl', 'learnedftl'])
+        latency_df = latency_df.sort_index(axis=1)
+        latency_arr = np.transpose(latency_df.to_numpy(dtype=float))
+        for i in range(latency_arr.shape[0]):
+            latency_arr[i, :] = latency_arr[i, :] / latency_arr[i, 0]
+        
+        plot_latency(latency_arr, latency_df.columns, ['DFTL', 'SFTL', 'LeaFTL'], "memory", log=True)

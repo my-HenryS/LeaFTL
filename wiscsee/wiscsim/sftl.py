@@ -178,6 +178,50 @@ class SFTLPage:
                              1:insert_position + 1 + elements_to_delete]
 
 
+class DFTLPage:
+    def __init__(self, index):
+        self.index = index
+        self.mapping = dict()
+
+    def __str__(self):
+        return ""
+
+    @property
+    def levels(self):
+        return 1
+
+    @property
+    def segments(self):
+        return []
+
+    @property
+    def memory(self):
+        return 2 * bytes_PPN * len(self.mapping)
+        
+    def update(self, entries, blocknum=-1):
+        for lpn, ppn in entries:
+            self.mapping[lpn] = ppn
+
+    def lookup(self, lpn, first=True):
+        if lpn in self.mapping:
+            return [(self.mapping[lpn], True, None)], 1, 0, 0
+        else:
+            return [], 1, 0, 0
+
+    def compact(self, promote=False):
+        pass
+
+    def merge(self, other):
+        for k,v in other.mapping.items():
+            if k not in self.mapping:
+                self.mapping[k] = v
+
+    def promote(self):
+        pass
+
+    def gc(self):
+        pass
+
 if __name__ == "__main__":
     
     trans_pages = dict()

@@ -17,10 +17,9 @@ def create_config(ftl_type="dftldes", page_size=4096):
 
     if ftl_type == "sftl":
         conf['ftl_type'] = "learnedftl"
-        conf['use_sftl'] = True
+        conf['internal_ftl_type'] = ftl_type
     else:
-        conf['ftl_type'] = ftl_type
-        conf['use_sftl'] = False
+        raise NotImplementedError
 
     conf['SSDFramework']['ncq_depth'] = 1
     conf['flash_config']['flash_page_size'] = page_size

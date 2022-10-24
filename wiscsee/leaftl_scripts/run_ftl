@@ -37,15 +37,10 @@ def split_lpns(offset, size, page_size):
 def create_config(ftl_type="dftldes"):
     if ftl_type == "dftldes" or ftl_type == "learnedftl" or ftl_type == "sftl":
         conf = wiscsim.dftldes.Config()
-    else:
-        conf = wiscsim.nkftl2.Config()
-
-    if ftl_type == "sftl":
         conf['ftl_type'] = "learnedftl"
-        conf['use_sftl'] = True
+        conf['internal_ftl_type'] = ftl_type
     else:
-        conf['ftl_type'] = ftl_type
-        conf['use_sftl'] = False
+        raise NotImplementedError
 
     # ssd config
     conf['flash_config']['n_pages_per_block'] = 256
@@ -71,7 +66,7 @@ def create_config(ftl_type="dftldes"):
     utils.runtime_update(conf)
 
     return conf
-split_lpns
+
 
 class RunFTL():
     def __init__(self, ftl, trace, start_lineno, lineno, output, write_only, ncq_depth, page_size, *args, **xargs):
@@ -85,11 +80,8 @@ class RunFTL():
         self.conf['SSDFramework']['ncq_depth'] = ncq_depth
         self.conf['flash_config']['page_size'] = page_size
 
-        if ftl == "sftl":
-            self.func = "self.run_%s()" % "learnedftl"
-        else:
-            self.func = "self.run_%s()" % ftl
-
+        self.func = "self.run_%s()" % "learnedftl"
+        
         if output:
             recorder = True
             xargs['result_dir'] = output
@@ -107,7 +99,7 @@ class RunFTL():
         pass
 
     def run_learnedftl(self):
-        log_msg("ftl = learnedftl, gamma = %.4f, cache_size = %.2f MB, lineno = %d" % (self.conf['gamma'], self.conf['cache_size'] / MB, self.lineno))
+        log_msg("ftl = %s, gamma = %.4f, cache_size = %.2f MB, lineno = %d" % (self.conf['internal_ftl_type'], self.conf['gamma'], self.conf['cache_size'] / MB, self.lineno))
         wf = Workflow(self.conf)
         sim = wf.run_simulator(self.events)
         mapping_table = sim.ssd.ftl.metadata.mapping_table
@@ -127,38 +119,7 @@ class RunFTL():
         log_msg("# of consecutive segments: %d" % len(list(filter(lambda seg : seg.consecutive, mapping_table.segments))))
         log_msg("estimated learnedftl memory footprint: %d B" % mapping_table.memory)
         log_msg("estimated dftl memory footprint: %d B" % (len(reference_mapping_table.mapping_table)*8))
-        
 
-    def run_hybridftl(self):
-        conf = create_config('nkftl2')
-
-        ctrl_event = ControlEvent(OP_ENABLE_RECORDER)
-        events = parse_events(conf['trace_path'], lineno=1000000)
-
-        wf = Workflow(conf)
-        sim = wf.run_simulator([ctrl_event]+events)
-
-        pftl = [log_group._page_map \
-                for dgn, log_group in sim.ssd.ftl.log_mapping_table.log_group_info.items() ]
-        len_pftl = sum([len(mapping)  for mapping in pftl])
-
-        bftl = sim.ssd.ftl.data_block_mapping_table.logical_to_physical_block
-        len_bftl = len(bftl)
-
-        print("pftl: %d " % len_pftl)
-        print("bftl: %d " % len_bftl)
-
-    def run_dftldes(self):
-        log_msg("ftl = dftldes, mapping_cache_size: %d, data_cache_size %d, lineno = %d" % (self.conf['mapping_cache_bytes'] / MB, self.conf['cache_size'] / MB, self.lineno))
-
-        wf = Workflow(self.conf)
-        sim = wf.run_simulator(self.events)
-        # dftl print
-        len_dftl = len([row for row in sim.ssd.ftl._mappings._lpn_table.rows() if row.state=="USED"])
-
-        log_msg("dftl size: %d B" % (len_dftl*8))
-
-        
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--ftl', dest="ftl", required=True, help="FTL to run")
@@ -166,7 +127,7 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--lineno', dest="lineno", default=10**9, help="Line number", type=int)
     parser.add_argument('-sl', '--start-line', dest="start_lineno", default=0, help="Start line number", type=int)
     parser.add_argument('-c', '--cache', dest="cache_size", default=0, help="Cache Size in MB", type=float)
-    parser.add_argument('-mc', '--mapping-cache', dest="mapping_cache_bytes", default=1, help="Mapping table cache size in MB", type=float)
+    parser.add_argument('-mc', '--mapping-cache', dest="mapping_cache_bytes", default=10, help="Mapping table cache size in MB", type=float)
     parser.add_argument('-g', '--gamma', dest="gamma", default=1e-4, help="Error bound of learnedftl", type=float)
     parser.add_argument('-d', '--dry', dest="dry_run", action='store_true', default=False, help="Perform dry-run")
     parser.add_argument('-o', '--output', dest="output", default='', help="Output directory")
