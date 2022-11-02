@@ -52,7 +52,7 @@ def plot_latency(data, traces, ftls, filename, log=False):
     # legend.set_rasterized(True)
     legend.draw_frame(False)
     plt.tight_layout()
-    plt.savefig("plots/latency.pdf")
+    plt.savefig(f"plots/{filename}.pdf")
 
 def plot_memory(data, traces, ftls, filename, log=False):
     fig, ax = plt.subplots(1, figsize=(5, 2))
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     BASE_PATH = os.path.dirname(os.path.realpath(__file__))
     PLOT_DIR = f"{BASE_PATH}/plots/"
     os.makedirs(PLOT_DIR, exist_ok=True)
-    raw_data_dir = [f'{BASE_PATH}/raw_results/{batch_name}']
+    raw_data_dir = [f'{BASE_PATH}/{batch_name}']
 
     if type(raw_data_dir) == list:
         files = []
@@ -137,7 +137,7 @@ if __name__ == "__main__":
                     try:
                         gamma = int(float(cmd[cmd.index("-g")+1]))
                     except ValueError:
-                        gamma = 1e-4
+                        gamma = 0
                     cache_size = int(float(cmd[cmd.index("-c")+1]))
                     ftl = cmd[cmd.index("-f")+1]
                     trace_file = abbreviate(cmd[cmd.index("-t")+1])
@@ -160,7 +160,10 @@ if __name__ == "__main__":
                         ratio = 0.0
                     ratio = round(ratio, 4)
     
-            category = ftl 
+            if ftl != "learnedftl":
+                category = ftl
+            else: 
+                category = f"{ftl}-{gamma}" 
             categories.add(category)
 
             if memory_size:
@@ -179,7 +182,7 @@ if __name__ == "__main__":
 
     if "memory_batch" in batch_name:
         memory_df = pd.DataFrame(memory)
-        memory_df = memory_df.reindex(['dftldes', 'sftl', 'learnedftl'])
+        memory_df = memory_df.reindex(['dftldes', 'sftl', 'learnedftl-0'])
         memory_df = memory_df.sort_index(axis=1)
         memory_arr = np.transpose(memory_df.to_numpy(dtype=float))
         for i in range(memory_arr.shape[0]):
@@ -187,12 +190,33 @@ if __name__ == "__main__":
         
         plot_memory(memory_arr, memory_df.columns, ['DFTL', 'SFTL', 'LeaFTL'], "memory", log=True)
             
-    if "main_batch" in batch_name: 
+    if "main_batch" in batch_name:
         latency_df = pd.DataFrame(latencies)
-        latency_df = latency_df.reindex(['dftldes', 'sftl', 'learnedftl'])
+        latency_df = latency_df.reindex(['dftldes', 'sftl', 'learnedftl-0'])
         latency_df = latency_df.sort_index(axis=1)
         latency_arr = np.transpose(latency_df.to_numpy(dtype=float))
+        avg_speedup = 1
         for i in range(latency_arr.shape[0]):
             latency_arr[i, :] = latency_arr[i, :] / latency_arr[i, 0]
+            # if latency_arr[i, 1] / latency_arr[i, -1] < 5:
+            avg_speedup *= latency_arr[i, 1] / latency_arr[i, -1]
+        plot_latency(latency_arr, latency_df.columns, ['DFTL', 'SFTL', 'LeaFTL'], "latency", log=True)
         
-        plot_latency(latency_arr, latency_df.columns, ['DFTL', 'SFTL', 'LeaFTL'], "memory", log=True)
+    if "sensitivity" in batch_name:
+        memory_df = pd.DataFrame(memory)
+        memory_df = memory_df.reindex(['learnedftl-0', 'learnedftl-16'])
+        memory_df = memory_df.sort_index(axis=1)
+        memory_arr = np.transpose(memory_df.to_numpy(dtype=float))
+        for i in range(memory_arr.shape[0]):
+            memory_arr[i, :] = memory_arr[i, :] / memory_arr[i, 0]
+        plot_memory(memory_arr, memory_df.columns, ['learnedftl-0', 'learnedftl-16'], "memory_sensitivity", log=False)
+        
+        latency_df = pd.DataFrame(latencies)
+        latency_df = latency_df.reindex(['learnedftl-0', 'learnedftl-4', 'learnedftl-16'])
+        latency_df = latency_df.sort_index(axis=1)
+        latency_arr = np.transpose(latency_df.to_numpy(dtype=float))
+        avg_speedup = 1
+        for i in range(latency_arr.shape[0]):
+            latency_arr[i, :] = latency_arr[i, :] / latency_arr[i, 0]
+            avg_speedup *= latency_arr[i, 0] / latency_arr[i, -1]
+        plot_latency(latency_arr, latency_df.columns, ['learnedftl-0','learnedftl-4','learnedftl-16'], "latency_sensitivity", log=True)

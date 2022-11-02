@@ -9,20 +9,13 @@ from random import randrange
 
 random.seed(1000)
 
-def create_config(ftl_type="dftldes", page_size=4096):
+def create_config(ftl_type="dftldes"):
     if ftl_type == "dftldes" or ftl_type == "learnedftl" or ftl_type == "sftl":
         conf = wiscsim.dftldes.Config()
-    else:
-        conf = wiscsim.nkftl2.Config()
-
-    if ftl_type == "sftl":
         conf['ftl_type'] = "learnedftl"
         conf['internal_ftl_type'] = ftl_type
     else:
         raise NotImplementedError
-
-    conf['SSDFramework']['ncq_depth'] = 1
-    conf['flash_config']['flash_page_size'] = page_size
 
     # ssd config
     conf['flash_config']['n_pages_per_block'] = 256
@@ -49,14 +42,13 @@ def create_config(ftl_type="dftldes", page_size=4096):
 
     return conf
 
-
 def split_lpns(offset, size, page_size):
     page_size = float(page_size)
     lpns = [lpn for lpn in range(int(math.floor(offset/page_size)), int(math.ceil((offset+size)/page_size)))]
 
     return lpns
 
-def parse_events(filename, page_size, recorder=True, start_lineno=0, lineno=float('inf'), max_writes = float('inf'), write_only=False, format="MSR"):
+def parse_events(filename, page_size, recorder=True, start_lineno=0, lineno=float('inf'), max_writes = float('inf'), max_write_size = float('inf'), write_only=False, format="MSR", capacity = 2*TB, shift_range=False):
     if "rocksdb" in filename:
         format = "blktrace"
     if "systor17" in filename:
@@ -85,13 +77,17 @@ def parse_events(filename, page_size, recorder=True, start_lineno=0, lineno=floa
     delimeter = format_config[format][2]
     if len(format_config[format]) > 3:
         offset_scale = format_config[format][3]
-
+    offset_shift = 0
+    if shift_range:
+        offset_shift = random.randint(0, capacity)
+        offset_shift = offset_shift // page_size * page_size
 
     with open(filename) as fp:
         t_start = None
         last_t = 0
         active_events = 0
         num_writes = 0
+        write_size = 0
         exist_lpns = dict()
         warm_up_writes = []
         for i, raw in enumerate(fp):
@@ -137,6 +133,7 @@ def parse_events(filename, page_size, recorder=True, start_lineno=0, lineno=floa
             offset *= offset_scale
             size *= size_scale
             t = int(t*time_scale)
+            offset += offset_shift
             if size == 0:
                 continue
 
@@ -175,6 +172,9 @@ def parse_events(filename, page_size, recorder=True, start_lineno=0, lineno=floa
 
             if num_writes >= max_writes:
                 break
+            
+            if write_size >= max_write_size:
+                break
 
             # if (i-start_lineno) % 1000000 == 0:
             #     log_msg("parsed %d lines" % i)
@@ -191,6 +191,7 @@ def parse_events(filename, page_size, recorder=True, start_lineno=0, lineno=floa
 
     events = [ControlEvent(OP_ENABLE_RECORDER)] + warm_up_writes + events
 
+    log_msg("Trace %s" % filename)
     log_msg("Total warm-up events %d" % len(warm_up_writes))
     log_msg("Total active events %d" % active_events)
     return events
@@ -219,7 +220,8 @@ def partial_shuffle(l, factor=5):
 
 def mix_events(all_events, page_size, policy='RR'):
     all_writes = []
-    conf = create_config(ftl_type="learnedftl", page_size=page_size)
+    conf = create_config(ftl_type="learnedftl")
+    # conf = create_config(ftl_type="learnedftl", page_size=page_size)
     if policy == "RR":
         for i in range(max([len(l) for l in all_events.values()])):
             for t in all_events.keys():
@@ -248,8 +250,7 @@ def mix_events(all_events, page_size, policy='RR'):
                     all_writes.append(all_events[t][i])
 
         if policy == "RR_Single_Light_Shuffle":
-            log_msg("Shuffling")
-            partial_shuffle(all_writes, len(all_writes) // 100)
+            partial_shuffle(all_writes, len(all_writes) // 200)
 
     if policy == "RR_Controlled_Random":
         threshold = 0.9

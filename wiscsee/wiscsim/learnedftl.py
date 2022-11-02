@@ -121,7 +121,8 @@ class Ftl(ftlbuilder.FtlBuilder):
             log_msg("Mapping Table Read Miss Ratio: %.2f" % (self.counter['mapping_table_read_miss'] / float(self.counter['mapping_table_read_miss'] + self.counter['mapping_table_read_hit'])))
 
         log_msg(self.counter)
-        log_msg("Avg lookup", sum(self.metadata.levels.values()), sum(int(k)*int(v) for k, v in self.metadata.levels.items()) / float(sum(self.metadata.levels.values())))
+        if sum(self.metadata.levels.values()) > 0:
+            log_msg("Avg lookup", sum(self.metadata.levels.values()), sum(int(k)*int(v) for k, v in self.metadata.levels.items()) / float(sum(self.metadata.levels.values())))
 
         self.recorder.append_to_value_list('distribution of lookups',
                 self.metadata.levels)
