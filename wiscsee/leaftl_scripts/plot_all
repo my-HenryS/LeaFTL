@@ -195,28 +195,23 @@ if __name__ == "__main__":
         latency_df = latency_df.reindex(['dftldes', 'sftl', 'learnedftl-0'])
         latency_df = latency_df.sort_index(axis=1)
         latency_arr = np.transpose(latency_df.to_numpy(dtype=float))
-        avg_speedup = 1
         for i in range(latency_arr.shape[0]):
             latency_arr[i, :] = latency_arr[i, :] / latency_arr[i, 0]
-            # if latency_arr[i, 1] / latency_arr[i, -1] < 5:
-            avg_speedup *= latency_arr[i, 1] / latency_arr[i, -1]
         plot_latency(latency_arr, latency_df.columns, ['DFTL', 'SFTL', 'LeaFTL'], "latency", log=True)
         
     if "sensitivity" in batch_name:
         memory_df = pd.DataFrame(memory)
-        memory_df = memory_df.reindex(['learnedftl-0', 'learnedftl-16'])
+        memory_df = memory_df.reindex(['learnedftl-0', 'learnedftl-1', 'learnedftl-4','learnedftl-16'])
         memory_df = memory_df.sort_index(axis=1)
         memory_arr = np.transpose(memory_df.to_numpy(dtype=float))
         for i in range(memory_arr.shape[0]):
             memory_arr[i, :] = memory_arr[i, :] / memory_arr[i, 0]
-        plot_memory(memory_arr, memory_df.columns, ['learnedftl-0', 'learnedftl-16'], "memory_sensitivity", log=False)
+        plot_memory(memory_arr, memory_df.columns, ['$\gamma$-0', '$\gamma$-1', '$\gamma$-4','$\gamma$-16'], "memory_sensitivity", log=False)
         
         latency_df = pd.DataFrame(latencies)
-        latency_df = latency_df.reindex(['learnedftl-0', 'learnedftl-4', 'learnedftl-16'])
+        latency_df = latency_df.reindex(['learnedftl-0', 'learnedftl-1', 'learnedftl-4','learnedftl-16'])
         latency_df = latency_df.sort_index(axis=1)
         latency_arr = np.transpose(latency_df.to_numpy(dtype=float))
-        avg_speedup = 1
         for i in range(latency_arr.shape[0]):
             latency_arr[i, :] = latency_arr[i, :] / latency_arr[i, 0]
-            avg_speedup *= latency_arr[i, 0] / latency_arr[i, -1]
-        plot_latency(latency_arr, latency_df.columns, ['learnedftl-0','learnedftl-4','learnedftl-16'], "latency_sensitivity", log=True)
+        plot_latency(latency_arr, latency_df.columns, ['$\gamma$=0', '$\gamma$=1', '$\gamma$=4','$\gamma$-16'], "latency_sensitivity", log=True)

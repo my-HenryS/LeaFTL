@@ -9,6 +9,7 @@ import shutil
 import copy
 import psutil
 from collections import defaultdict
+import json
 
 BASE_PATH = os.path.dirname(os.path.realpath(__file__))
 TRACE_PATH = f"{BASE_PATH}/leaftl_traces"
@@ -23,6 +24,7 @@ MB = 1024.0**2
 GB = 1024.0**3
 
 WARMUP_RATIO = 0.9
+BITMAP_SIZE = 67
 DRAM_SIZE = 1024  # MB
 BUFFER_SIZE = 8   # MB
 
@@ -151,10 +153,9 @@ def main_batch(generator, warmup):
     batch['lineno'] = [1000000000]
     batch['trace'] = ["MSR-Cambridge/usr_0.csv", "MSR-Cambridge/prn_0.csv", "MSR-Cambridge/src2_0.csv", "MSR-Cambridge/hm_0.csv", "MSR-Cambridge/prxy_0.csv", 'FIU/homes/homes-110108-112108.1.blkparse', 'FIU/mail/cheetah.cs.fiu.edu-110108-113008.1.blkparse']
     
-    sftl_cache_size = DRAM_SIZE - warmup["sftl"]*WARMUP_RATIO
-    leaftl_cache_size = DRAM_SIZE - warmup["learnedftl-0"]*WARMUP_RATIO
-    print(sftl_cache_size, leaftl_cache_size)
-    batch[('ftl', 'gamma', 'cache', 'mapping_cache')] = [("dftldes", 1e-4, BUFFER_SIZE, DRAM_SIZE-BUFFER_SIZE), ("sftl", 1e-4, sftl_cache_size, sftl_cache_size),("learnedftl", 1e-4, leaftl_cache_size, DRAM_SIZE-leaftl_cache_size)] 
+    sftl_cache_size = DRAM_SIZE - warmup["sftl"]*WARMUP_RATIO // MB - BITMAP_SIZE
+    leaftl_cache_size = DRAM_SIZE - warmup["learnedftl-0"]*WARMUP_RATIO // MB - BITMAP_SIZE
+    batch[('ftl', 'gamma', 'cache', 'mapping_cache')] = [("dftldes", 1e-4, BUFFER_SIZE, DRAM_SIZE-BUFFER_SIZE), ("sftl", 1e-4, sftl_cache_size, DRAM_SIZE-sftl_cache_size),("learnedftl", 1e-4, leaftl_cache_size, DRAM_SIZE-leaftl_cache_size)] 
 
     batch['write_only'] = [0]
     batch['ncq_depth'] = [1]
@@ -168,8 +169,7 @@ def sensitivity_batch(generator, warmup):
     batch['lineno'] = [1000000000]
     batch['trace'] = ["MSR-Cambridge/usr_0.csv", "MSR-Cambridge/prn_0.csv", "MSR-Cambridge/src2_0.csv", "MSR-Cambridge/hm_0.csv", "MSR-Cambridge/prxy_0.csv", 'FIU/homes/homes-110108-112108.1.blkparse', 'FIU/mail/cheetah.cs.fiu.edu-110108-113008.1.blkparse']
 
-    leaftl_cache_sizes = [DRAM_SIZE - warmup[f"learnedftl-{gamma}"]*WARMUP_RATIO for gamma in [0, 1, 4, 16]]
-    print(leaftl_cache_sizes)
+    leaftl_cache_sizes = [DRAM_SIZE - warmup[f"learnedftl-{gamma}"]*WARMUP_RATIO // MB - BITMAP_SIZE for gamma in [0, 1, 4, 16]]
         
     batch[('ftl', 'gamma', 'cache', 'mapping_cache')] = [("learnedftl", 1e-4, leaftl_cache_sizes[0], DRAM_SIZE-leaftl_cache_sizes[0]), ("learnedftl", 1, leaftl_cache_sizes[1], DRAM_SIZE-leaftl_cache_sizes[1]), ("learnedftl", 4, leaftl_cache_sizes[2], DRAM_SIZE-leaftl_cache_sizes[2]), ("learnedftl", 16, leaftl_cache_sizes[3], DRAM_SIZE-leaftl_cache_sizes[3]),] 
 
@@ -186,6 +186,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         STDOUT = bool(int(sys.argv[2]))
         
+    generator = BatchArgGenerator(name)
     warmup = dict()
     if os.path.exists(WARMUP_FILE):
         with open(WARMUP_FILE) as in_f:
