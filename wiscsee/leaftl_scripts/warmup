@@ -943,6 +943,7 @@ if __name__ == "__main__":
     traces += glob.glob(HOME_DIR+"FIU/homes/*.blkparse")
     traces += glob.glob(HOME_DIR+"FIU/mail/*.blkparse")
 
+    n_jobs = int(sys.argv[1])
     page_size = 4096.0
     max_writes = 500000
 
@@ -1024,7 +1025,7 @@ if __name__ == "__main__":
 
         return (mapping_table.memory, reference_mapping_table.memory)
 
-    params = [('learnedftl', 1e-4), ('learnedftl', 1), ('learnedftl', 4), ('learnedftl', 16), ("sftl", 0)]
+    params = [("sftl", 0), ('learnedftl', 1e-4), ('learnedftl', 1), ('learnedftl', 4), ('learnedftl', 16)]
 
-    results = Parallel(n_jobs=len(params), backend="multiprocessing")(
+    results = Parallel(n_jobs=n_jobs, backend="multiprocessing")(
         delayed(warm_up)(ftl_type, gamma) for (ftl_type, gamma) in params)

@@ -1,2 +1,3 @@
 mkdir -p raw_results plots
-pypy -m pip install scipy mmh3 objgraph
+pip3 install psutil simpy bitarray bidict
+pypy -m pip install wheel scipy mmh3 objgraph

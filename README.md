@@ -12,6 +12,7 @@ cd LeaFTL
 pushd .
 # Download traces
 cd wiscsee/leaftl_scripts
+pip3 install gdown
 gdown 1Lw0DgZWwaeuSckLnKqoBAcM64rlGFWZi
 unzip traces.zip
 popd
@@ -24,6 +25,10 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)/wiscsee
 wget https://downloads.python.org/pypy/pypy2.7-v7.3.9-linux64.tar.bz2
 tar xf pypy2.7-v7.3.9-linux64.tar.bz2
 export PATH=$PATH:$(pwd)/pypy2.7-v7.3.9-linux64/bin
+pypy -m ensurepip
+
+# Install dependencies
+sudo apt-get install libblas-dev liblapack-dev libatlas-base-dev gfortran
 
 # Install Python packages
 cd wiscsee/leaftl_scripts
@@ -34,48 +39,61 @@ cd wiscsee/leaftl_scripts
 
 ## 2. Simulation-based Experiments
 
+### 2.0 Directory Structures
+
+```shell
+leaftl_scripts/
+├── batch  # script to run a batch of experiments
+├── leaftl_traces  # leaftl traces
+├── plot_all   # script to plot figures
+├── plots     # directory for figures
+├── raw_results     # raw experiment output
+├── reference_plots   # reference figures
+├── run_ftl      # simulator entry function
+├── setup.sh    # env setup script
+└── warmup    # warmup workloads
+```
+
 ### 2.1 Memory Reduction Comparison with Baseline FTLs
 
 ```shell
 cd LeaFTL/wiscsee/leaftl_scripts
-# Run batch of experiments
-./batch memory_batch
+# Run batch of experiments (replace $PARALLELISM with an integer, e.g. 10; higher parallelism will consume memory but run the experiments faster)
+./batch memory_batch $PARALLELISM
 # Run plot scripts
 ./plot_all memory_batch
 ```
 
 #### 2.1.1 Expected Results
 
-Here we will decribe the expected output logs and figures.
-
-### 2.2 Performance Improvement Comparison with Baseline FTLs
+### ![memory](wiscsee/leaftl_scripts/reference_plots/memory.png)2.2 Performance Improvement Comparison with Baseline FTLs
 
 ```shell
 cd LeaFTL/wiscsee/leaftl_scripts
-# Run batch of experiments
-./warmup performance_batch
-# Run batch of experiments
-./batch performance_batch
+# Run warmup workloads (replace $PARALLELISM with an integer in [1, 5], higher parallelism will consume memory but run the experiments faster)
+pypy warmup $PARALLELISM
+# Run batch of experiments (replace $PARALLELISM with an integer, e.g. 10)
+./batch performance_batch $PARALLELISM
 # Run plot scripts
 ./plot_all performance_batch
 ```
 
 #### 2.2.1 Expected Results
 
-Here we will decribe the expected output logs and figures.
+![latency](wiscsee/leaftl_scripts/reference_plots/latency.png)
 
 ### 2.3 Sensitivity Analsysis with Different Gamma
 
 ```shell
 cd LeaFTL/wiscsee/leaftl_scripts
-# Run batch of experiments
-./warmup sensitivity_batch
-# Run batch of experiments
-./batch sensitivity_batch
+# Run batch of experiments (replace $PARALLELISM with an integer, e.g. 10)
+./batch sensitivity_batch $PARALLELISM
 # Run plot scripts
 ./plot_all sensitivity_batch
 ```
 
 #### 2.3.1 Expected Results
 
-Here we will decribe the expected output logs and figures.
+![latency_sensitivity](wiscsee/leaftl_scripts/reference_plots/latency_sensitivity.png)
+
+![memory_sensitivity](wiscsee/leaftl_scripts/reference_plots/memory_sensitivity.png)
