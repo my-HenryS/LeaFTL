@@ -13,7 +13,7 @@ pushd .
 # Download traces
 cd wiscsee/leaftl_scripts
 pip3 install gdown
-gdown 1Lw0DgZWwaeuSckLnKqoBAcM64rlGFWZi
+gdown 13gS89MNWESywUA3ZGycSwYTFjZ29qdGu
 unzip traces.zip
 popd
 
@@ -82,6 +82,8 @@ pypy warmup $PARALLELISM
 
 ![latency](wiscsee/leaftl_scripts/reference_plots/latency.png)
 
+![lookup_cdf](wiscsee/leaftl_scripts/reference_plots/lookup_cdf.png)
+
 ### 2.3 Sensitivity Analsysis with Different Gamma
 
 ```shell
@@ -97,3 +99,5 @@ cd LeaFTL/wiscsee/leaftl_scripts
 ![latency_sensitivity](wiscsee/leaftl_scripts/reference_plots/latency_sensitivity.png)
 
 ![memory_sensitivity](wiscsee/leaftl_scripts/reference_plots/memory_sensitivity.png)
+
+![misprediction](wiscsee/leaftl_scripts/reference_plots/misprediction.png)
