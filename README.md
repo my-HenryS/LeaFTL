@@ -73,9 +73,9 @@ cd LeaFTL/wiscsee/leaftl_scripts
 # Run warmup workloads (replace $PARALLELISM with an integer in [1, 5], higher parallelism will consume memory but run the experiments faster)
 pypy warmup $PARALLELISM
 # Run batch of experiments (replace $PARALLELISM with an integer, e.g. 10)
-./batch performance_batch $PARALLELISM
+./batch main_batch $PARALLELISM
 # Run plot scripts
-./plot_all performance_batch
+./plot_all main_batch
 ```
 
 #### 2.2.1 Expected Results
