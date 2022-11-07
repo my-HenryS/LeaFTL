@@ -938,6 +938,8 @@ if __name__ == "__main__":
     if not os.path.exists(OUT_DIR):
         os.mkdir(OUT_DIR)
     OUT_FILE = OUT_DIR+"warmup.json"
+    if not os.path.exists(OUT_FILE):
+        open(OUT_FILE, 'a').close()
     traces = []
     traces += glob.glob(HOME_DIR+"MSR-Cambridge/*.csv")
     traces += glob.glob(HOME_DIR+"FIU/homes/*.blkparse")
