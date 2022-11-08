@@ -14,7 +14,7 @@ pushd .
 cd wiscsee/leaftl_scripts
 pip3 install gdown
 gdown 13gS89MNWESywUA3ZGycSwYTFjZ29qdGu
-unzip traces.zip
+unzip leaftl_traces.zip
 popd
 
 # Set Env Variables
